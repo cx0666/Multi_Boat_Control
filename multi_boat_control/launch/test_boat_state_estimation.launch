@@ -1,0 +1,42 @@
+<!--
+Test Launch File for Multi-Boat Control System
+用于测试和调试的启动文件 - 包含更详细的输出和调试选项
+注意：每艘无人艇都配备真实IMU，无需模拟
+-->
+<launch>
+  <!-- 参数: 是否启用调试模式 -->
+  <arg name="debug" default="false" />
+  <arg name="rtk_port" default="/dev/ttyUSB0" />
+
+  <!-- RTK Node - 从串口读取RTK数据 -->
+  <node name="rtk_node" pkg="multi_boat_control" type="rtk_node.py" output="screen">
+    <!-- RTK串口参数 -->
+    <param name="port" value="$(arg rtk_port)" />
+    <param name="baudrate" value="115200" />
+    
+    <!-- 调试模式下设置更详细的日志 -->
+    <param name="debug" value="$(arg debug)" />
+  </node>
+
+  <!-- State Estimator Node - 状态融合与发布 -->
+  <node name="state_estimator_node" pkg="multi_boat_control" type="state_estimator_node.py" output="screen">
+    <!-- 坐标系原点参数 (湖泊坐标系) - 待测定值 -->
+    <param name="origin_latitude" value="29.9983979" />
+    <param name="origin_longitude" value="122.1602789" />
+    
+    <!-- 传感器校准参数 (克服Sim2Real Gap的关键) -->
+    <param name="rtk_heading_offset_deg" value="0.0" />
+    <param name="imu_heading_offset_deg" value="0.0" />
+  </node>
+
+  <!-- 坐标变换发布 -->
+  <node name="map_to_odom_broadcaster" pkg="tf2_ros" type="static_transform_publisher" 
+        args="0 0 0 0 0 0 map odom" />
+
+  <!-- RViz可视化 (调试时使用) -->
+  <group if="$(arg debug)">
+    <node name="rviz" pkg="rviz" type="rviz" 
+          args="-d $(find multi_boat_control)/config/boat_visualization.rviz" />
+  </group>
+
+</launch>

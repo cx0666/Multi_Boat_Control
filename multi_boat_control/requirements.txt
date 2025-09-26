@@ -1,0 +1,12 @@
+# Python dependencies for multi_boat_control package
+# These packages are required for hardware interface functionality
+
+# DroneKit - Python API for MAVLink communication with autopilots
+dronekit>=2.9.2
+
+# PyMAVLink - Low-level MAVLink protocol implementation
+pymavlink>=2.4.37
+
+# Optional dependencies for enhanced functionality
+# pyserial>=3.5 (usually included with dronekit)
+# future>=0.18.0 (usually included with dronekit)
