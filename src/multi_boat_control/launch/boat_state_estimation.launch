@@ -1,0 +1,32 @@
+<!--
+Multi-Boat Control System Launch File
+Phase 1: State Estimation and Publication
+启动RTK节点和状态估计节点
+-->
+<launch>
+  <!-- RTK Node - 从串口读取RTK数据 -->
+  <node name="rtk_node" pkg="multi_boat_control" type="rtk_node.py" output="screen">
+    <!-- RTK串口参数 -->
+    <param name="port" value="/dev/ttyUSB1" />
+    <param name="baudrate" value="115200" />
+  </node>
+
+  <!-- State Estimator Node - 状态融合与发布 -->
+  <node name="state_estimator_node" pkg="multi_boat_control" type="state_estimator_node.py" output="screen">
+    <!-- 坐标系原点参数 (湖泊坐标系) -->
+    <param name="origin_latitude" value="29.9983979" />
+    <param name="origin_longitude" value="122.1602789" />
+    
+    <!-- 传感器校准参数 (克服Sim2Real Gap的关键) -->
+    <param name="rtk_heading_offset_deg" value="0.0" />
+    <param name="imu_heading_offset_deg" value="0.0" />
+  </node>
+
+  <!-- 可选: 发布静态坐标变换 -->
+  <node name="map_to_odom_broadcaster" pkg="tf2_ros" type="static_transform_publisher" 
+        args="0 0 0 0 0 0 map odom" />
+
+  <!-- 日志级别设置 -->
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find multi_boat_control)/config/custom_rosconsole.conf" />
+
+</launch>

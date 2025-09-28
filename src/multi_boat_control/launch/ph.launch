@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 
+    Phase 2 Integration Test Launch File - 端到端集成测试
+    
+    完整的四节点系统，验证"感知->决策->执行"闭环链路：
+    1. rtk_node: RTK GPS数据采集
+    2. state_estimator_node: RTK+航向角状态融合
+    3. control_interface_node: Pixhawk控制接口
+    4. end_to_end_tester: 航向角闭环控制器
+    
+    测试流程:
+    1. 启动此launch文件
+    2. 等待所有节点初始化完成
+    3. 在end_to_end_tester终端输入目标航向角
+    4. 观察无人艇自动转向至目标方向
+    
+    零外部依赖，完全自包含
+    -->
+    
+    <!-- 系统参数配置 -->
+    <arg name="rtk_device" default="/dev/ttyUSB1" />
+    <arg name="rtk_baud" default="115200" />
+    <arg name="pixhawk_device" default="/dev/ttyUSB0" />
+    <arg name="pixhawk_baud" default="921600" />
+     <arg name="show_diagnostic" default="true" />
+    
+    <!-- Phase 1: RTK GPS数据采集 -->
+    <node name="rtk_node" pkg="multi_boat_control" type="rtk_node.py" output="screen">
+        <param name="port" value="$(arg rtk_device)" />
+        <param name="baudrate" value="$(arg rtk_baud)" />
+        <param name="timeout" value="1.0" />
+    </node>
+
+ 
+</launch>
