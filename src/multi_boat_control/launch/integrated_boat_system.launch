@@ -1,0 +1,128 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 
+    Integrated Boat System Launch File
+    
+    This launch file starts the complete multi-boat control system:
+    1. RTK GPS data acquisition
+    2. State estimation (RTK + heading fusion)  
+    3. Control interface (Pixhawk communication + IMU publishing)
+    
+    Architecture:
+    RTK GPS → rtk_node → /rtk_data → state_estimator_node → /boat_state
+    Pixhawk → control_interface_node → /boat/heading → state_estimator_node
+                                    → /boat/imu/data (for other uses)
+                                    → velocity control
+    -->
+    
+    <!-- System Configuration Arguments -->
+    <arg name="boat_id" default="boat1" doc="Unique boat identifier"/>
+    <arg name="rtk_device" default="/dev/ttyUSB1" doc="RTK GPS device"/>
+    <arg name="rtk_baud" default="115200" doc="RTK GPS baud rate"/>
+    <arg name="pixhawk_device" default="/dev/ttyUSB0" doc="Pixhawk connection"/>
+    <arg name="pixhawk_baud" default="921600" doc="Pixhawk baud rate"/>
+    
+    <!-- System Performance Parameters -->
+    <arg name="state_publish_rate" default="10.0" doc="State estimation publish rate (Hz)"/>
+    <arg name="imu_publish_rate" default="10.0" doc="IMU data publish rate (Hz)"/>
+    <arg name="max_data_age" default="1.0" doc="Maximum acceptable data age (seconds)"/>
+    
+    <!-- Coordinate System Parameters -->
+    <arg name="use_magnetic_north" default="true" doc="Use magnetic north coordinate system"/>
+    <arg name="magnetic_declination" default="0.0" doc="Local magnetic declination (degrees)"/>
+    
+    <!-- === CORE SYSTEM NODES === -->
+    
+    <!-- RTK GPS Data Acquisition Node -->
+    <node name="rtk_node" pkg="multi_boat_control" type="rtk_node.py" output="screen">
+        <param name="device" value="$(arg rtk_device)" />
+        <param name="baud_rate" value="$(arg rtk_baud)" />
+        <param name="timeout" value="1.0" />
+        
+        <!-- Remap to boat-specific namespace if needed -->
+        <remap from="rtk_data" to="rtk_data" />
+    </node>
+    
+    <!-- Enhanced Control Interface Node -->
+    <!-- This node handles: Pixhawk connection, IMU publishing, heading publishing, velocity control -->
+    <node name="control_interface_node" pkg="multi_boat_control" type="control_interface_node.py" 
+          output="screen" required="true">
+        
+        <!-- Pixhawk Connection Parameters -->
+        <param name="connect_string" value="$(arg pixhawk_device)" />
+        <param name="baud_rate" value="$(arg pixhawk_baud)" />
+        <param name="connection_timeout" value="60" />
+        <param name="max_init_retries" value="5" />
+        
+        <!-- Publishing Parameters -->
+        <param name="publish_rate" value="$(arg imu_publish_rate)" />
+        
+        <!-- Safety Parameters -->
+        <param name="max_forward_speed" value="4.0" />
+        <param name="min_forward_speed" value="-1.0" />
+        <param name="max_yaw_rate" value="2.0" />
+        <param name="min_yaw_rate" value="-2.0" />
+        
+        <!-- Topic Remapping for Clean Architecture -->
+        <remap from="~cmd_vel" to="control_interface_node/cmd_vel" />
+        <remap from="boat/imu/data" to="imu/data" />
+        <remap from="boat/heading" to="boat/heading" />
+        <remap from="boat/connected" to="boat/pixhawk_connected" />
+    </node>
+    
+    <!-- State Estimator Node (Fusion of RTK + Heading) -->
+    <node name="state_estimator_node" pkg="multi_boat_control" type="state_estimator_node.py" 
+          output="screen">
+        
+        <!-- Data Fusion Parameters -->
+        <param name="publish_rate" value="$(arg state_publish_rate)" />
+        <param name="max_data_age" value="$(arg max_data_age)" />
+        <param name="require_both_sources" value="true" />
+        
+        <!-- Data Quality Thresholds -->
+        <param name="min_gps_accuracy" value="2.0" />
+        <param name="heading_timeout" value="2.0" />
+        
+        <!-- Coordinate System Configuration -->
+        <param name="magnetic_declination" value="$(arg magnetic_declination)" />
+        
+        <!-- Topic Subscriptions -->
+        <remap from="rtk_data" to="rtk_data" />
+        <remap from="boat/heading" to="boat/heading" />
+        <remap from="boat_state" to="boat_state" />
+    </node>
+    
+    <!-- === DIAGNOSTIC AND MONITORING === -->
+    
+    <!-- System Health Monitor (Optional) -->
+    <node name="system_monitor" pkg="multi_boat_control" type="sensor_diagnostic.py" 
+          output="screen" if="false">
+        <param name="check_interval" value="5.0" />
+    </node>
+    
+    <!-- === TESTING AND DEBUG TOOLS === -->
+    
+    <!-- Topic Echo for Monitoring (Optional, enable for debugging) -->
+    <group if="false">
+        <node name="echo_boat_state" pkg="rostopic" type="rostopic" 
+              args="echo /boat_state" output="screen" />
+        
+        <node name="echo_rtk_data" pkg="rostopic" type="rostopic" 
+              args="echo /rtk_data" output="screen" />
+        
+        <node name="echo_heading" pkg="rostopic" type="rostopic" 
+              args="echo /boat/heading" output="screen" />
+    </group>
+    
+    <!-- RQT Graph for System Visualization (Optional) -->
+    <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" if="false" />
+    
+    <!-- === INFORMATION DISPLAY === -->
+    <node name="system_info" pkg="rostopic" type="rostopic" 
+          args="echo /control_interface_node/status" output="screen" />
+    
+    <!-- System Startup Information -->
+    <node name="startup_info" pkg="rostopic" type="rostopic" 
+          args="list" output="screen" launch-prefix="bash -c 'sleep 5; '" />
+    
+</launch>

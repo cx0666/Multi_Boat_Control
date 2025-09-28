@@ -1,0 +1,105 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Enhanced Test Launch File for Control Interface Node (Phase 2) -->
+    <!-- This file tests the refactored control interface node with ExtendedVehicle -->
+    
+    <arg name="connect_string" default="/dev/ttyUSB0" />
+    <arg name="baud_rate" default="921600" />
+    <arg name="connection_timeout" default="60" />
+    <arg name="max_init_retries" default="5" />
+    <arg name="publish_rate" default="10.0" />
+    
+    <!-- Enhanced Control Interface Node with ExtendedVehicle -->
+    <!-- Now includes: Pixhawk control + IMU publishing + heading publishing -->
+    <node name="control_interface_node" pkg="multi_boat_control" type="control_interface_node.py" 
+          output="screen" required="true">
+        
+        <!-- Pixhawk Connection Parameters -->
+        <param name="connect_string" value="$(arg connect_string)" />
+        <param name="baud_rate" value="$(arg baud_rate)" />
+        <param name="connection_timeout" value="$(arg connection_timeout)" />
+        <param name="max_init_retries" value="$(arg max_init_retries)" />
+        <param name="publish_rate" value="$(arg publish_rate)" />
+        
+        <!-- Safety Parameters -->
+        <param name="max_forward_speed" value="4.0" />
+        <param name="min_forward_speed" value="-1.0" />
+        <param name="max_yaw_rate" value="2.0" />
+        <param name="min_yaw_rate" value="-2.0" />
+        
+        <!-- Topic Remapping -->
+        <remap from="~cmd_vel" to="control_interface_node/cmd_vel" />
+        <remap from="boat/imu/data" to="imu/data" />
+        <remap from="boat/heading" to="boat/heading" />
+    </node>
+    
+    <!-- Keyboard Teleop Node for Testing -->
+    <!-- Keys: i=forward, ,=backward, j=turn left, l=turn right, k=stop -->
+    <node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" 
+          output="screen" launch-prefix="xterm -e">
+        
+        <!-- Remap to control interface node's cmd_vel topic -->
+        <remap from="cmd_vel" to="control_interface_node/cmd_vel" />
+        
+        <!-- Enhanced teleop parameters for boat control -->
+        <param name="speed" value="1.5" />            <!-- Linear speed scaling (increased) -->
+        <param name="turn" value="0.8" />             <!-- Angular speed scaling (increased) -->
+        <param name="speed_linear_max" value="3.0" />  <!-- Max linear speed -->
+        <param name="speed_angular_max" value="1.5" />  <!-- Max angular speed -->
+        <param name="repeat_rate" value="10.0" />      <!-- Command repeat rate -->
+    </node>
+    
+    <!-- === MONITORING AND DEBUGGING === -->
+    
+    <!-- Status Monitoring -->
+    <node name="status_monitor" pkg="rostopic" type="rostopic" 
+          args="echo /control_interface_node/status" output="screen" />
+    
+    <!-- IMU Data Monitoring (Optional - enable for debugging) -->
+    <node name="imu_monitor" pkg="rostopic" type="rostopic" 
+          args="echo /imu/data" output="screen" if="false" />
+    
+    <!-- Heading Data Monitoring (Optional - enable for debugging) -->
+    <node name="heading_monitor" pkg="rostopic" type="rostopic" 
+          args="echo /boat/heading" output="screen" if="false" />
+    
+    <!-- Topic List Display (shows all active topics) -->
+    <node name="topic_list" pkg="rostopic" type="rostopic" 
+          args="list" output="screen" launch-prefix="bash -c 'sleep 3; '" />
+    
+    <!-- Optional: RQT Graph for System Visualization -->
+    <node name="rqt_graph" pkg="rqt_graph" type="rqt_graph" if="false" />
+    
+    <!-- Optional: RQT Plot for Real-time Data Monitoring -->
+    <node name="rqt_plot" pkg="rqt_plot" type="rqt_plot" if="false" 
+          args="/boat/heading/data" />
+    
+    <!-- === INFORMATION DISPLAY === -->
+    <group>
+        <param name="test_info" value="
+        === Phase 2 Control Interface Test ===
+        
+        Features being tested:
+        ✓ Enhanced ExtendedVehicle connection
+        ✓ Pixhawk initialization (GUIDED + ARM)
+        ✓ IMU data publishing (/imu/data)
+        ✓ Heading data publishing (/boat/heading)
+        ✓ Velocity command execution
+        ✓ Thread-based data publishing
+        
+        Keyboard Controls (in XTerm window):
+          i - Forward    , - Backward
+          j - Turn Left  l - Turn Right
+          k - Stop       q/z - Speed up/down
+          
+        Manual Testing:
+          rostopic pub /control_interface_node/cmd_vel geometry_msgs/Twist 'linear: {x: 1.0}' -r 10
+          
+        Monitoring:
+          rostopic echo /imu/data
+          rostopic echo /boat/heading
+          rostopic echo /control_interface_node/status
+        " />
+    </group>
+    
+</launch>

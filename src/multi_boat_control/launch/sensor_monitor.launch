@@ -1,0 +1,26 @@
+<!--
+Sensor Monitor Launch File
+专门用于传感器状态监控和调试的启动文件
+每艘无人艇都配备RTK和IMU，此文件用于验证传感器正常工作
+-->
+<launch>
+  <!-- 参数配置 -->
+  <arg name="rtk_port" default="/dev/ttyUSB1" />
+  <arg name="show_diagnostic" default="true" />
+
+  <!-- RTK Node - 仅用于传感器测试 -->
+  <node name="rtk_node" pkg="multi_boat_control" type="rtk_node.py" output="screen">
+    <param name="port" value="$(arg rtk_port)" />
+    <param name="baudrate" value="115200" />
+  </node>
+
+  <!-- 传感器诊断工具 -->
+  <group if="$(arg show_diagnostic)">
+    <node name="sensor_diagnostic" pkg="multi_boat_control" type="sensor_diagnostic.py" 
+          output="screen" launch-prefix="bash -c 'sleep 2; exec $0 $@'" />
+  </group>
+
+  <!-- 说明信息 -->
+  <param name="launch_info" value="Sensor monitoring mode - RTK and IMU status will be displayed" />
+
+</launch>
