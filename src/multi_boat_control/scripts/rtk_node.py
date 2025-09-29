@@ -22,7 +22,7 @@ class RTKNode:
         self.baudrate = rospy.get_param('~baudrate', 115200)
         
         # 创建发布者
-        self.rtk_pub = rospy.Publisher('/rtk/raw', RTK, queue_size=10)
+        self.rtk_pub = rospy.Publisher('rtk_data', RTK, queue_size=10)
         
         # 初始化串口
         self.serial_connection = None

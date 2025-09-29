@@ -25,14 +25,14 @@ class SensorDiagnostic:
         self.imu_last_data = None
         
         # 创建订阅者
-        self.rtk_sub = rospy.Subscriber('/rtk/raw', RTK, self.rtk_callback)
+        self.rtk_sub = rospy.Subscriber('rtk_data', RTK, self.rtk_callback)
         self.imu_sub = rospy.Subscriber('/imu/data', Imu, self.imu_callback)
         
         # 创建状态报告定时器
         self.report_timer = rospy.Timer(rospy.Duration(3.0), self.print_status)
         
         rospy.loginfo("=== Sensor Diagnostic Tool Started ===")
-        rospy.loginfo("Monitoring RTK (/rtk/raw) and IMU (/imu/data) topics...")
+        rospy.loginfo("Monitoring RTK (rtk_data) and IMU (/imu/data) topics...")
         rospy.loginfo("Press Ctrl+C to stop")
     
     def rtk_callback(self, msg):

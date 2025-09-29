@@ -11,7 +11,6 @@ integrating:
 - IMU data publishing (from motion_control.py + __init__.py)
 - Velocity command execution (from circle.py)
 - Heading data publishing for state estimation
-- Safety Watchdog mechanism for command timeout protection
 
 Architecture: Uses ExtendedVehicle class instead of composition pattern
 Key Responsibilities:
@@ -20,11 +19,10 @@ Key Responsibilities:
 3. Publish IMU and heading data for state estimation
 4. Execute velocity commands from ROS
 5. Monitor system health and handle reconnection
-6. Safety watchdog to prevent motor runaway
 
 Based on: motion_control.py, circle.py, __init__.py references
 Author: Multi-Boat Team
-Version: 2.1.0 (Added Safety Watchdog)
+Version: 2.0.0
 """
 
 import rospy
@@ -51,8 +49,7 @@ class ControlInterfaceNode:
     Enhanced Control Interface Node using ExtendedVehicle.
     
     This implementation follows the proven architecture from motion_control.py
-    while integrating the extended capabilities for multi-boat coordination
-    and safety watchdog mechanism.
+    while integrating the extended capabilities for multi-boat coordination.
     """
     
     def __init__(self):
@@ -61,7 +58,7 @@ class ControlInterfaceNode:
         rospy.loginfo("=== Enhanced Control Interface Node Starting ===")
         
         # Configuration from ROS parameters
-        self.connect_string = rospy.get_param('~connect_string', '/dev/ttyUSB0')
+        self.connect_string = rospy.get_param('~connect_string', '/dev/ttyUSB1')
         self.baud_rate = rospy.get_param('~baud_rate', 921600)
         self.connection_timeout = rospy.get_param('~connection_timeout', 60)
         self.max_init_retries = rospy.get_param('~max_init_retries', 5)
@@ -89,17 +86,11 @@ class ControlInterfaceNode:
         self.connection_lock = threading.Lock()
         self.command_lock = threading.Lock()
         
-        # Safety Watchdog parameters
-        self.last_cmd_vel_time = rospy.Time(0)  # 初始化为一个很早的时间，确保启动后能立即触发一次停止
-        self.command_timeout = rospy.get_param('~command_timeout', 0.5)  # 超时时间，单位秒
-        
-        rospy.loginfo("  Safety Watchdog: timeout=%.1f seconds", self.command_timeout)
-        
         # ROS interfaces
         self.cmd_vel_sub = None
         self.status_pub = rospy.Publisher('~status', Bool, queue_size=1)
         
-        # Internal publisher for state estimator (use relative path for namespace compatibility)
+        # Internal publisher for state estimator
         self.heading_pub = rospy.Publisher('boat/heading', Float64, queue_size=1)
         
         # Connect and initialize vehicle
@@ -300,12 +291,7 @@ class ControlInterfaceNode:
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
         
-        # Command timeout thread (Watchdog)
-        self.watchdog_thread = threading.Thread(target=self.command_watchdog_loop)
-        self.watchdog_thread.daemon = True
-        self.watchdog_thread.start()
-        
-        rospy.loginfo("✓ Publishing threads started (including Safety Watchdog)")
+        rospy.loginfo("✓ Publishing threads started")
     
     def imu_publishing_loop(self):
         """
@@ -397,31 +383,6 @@ class ControlInterfaceNode:
                 rospy.logwarn("Error in monitoring loop: %s", e)
                 time.sleep(1.0)
     
-    def command_watchdog_loop(self):
-        """
-        安全心跳循环 (Watchdog)。如果超过指定时间未收到cmd_vel，则强制发送停止指令。
-        """
-        rate = rospy.Rate(10)  # 以10Hz的频率检查，保证及时响应
-        
-        rospy.loginfo("🛡️ Safety Watchdog started with %.1f second timeout", self.command_timeout)
-        
-        while not rospy.is_shutdown() and not self.should_shutdown:
-            try:
-                if self.connected and self.initialized:
-                    time_since_last_cmd = (rospy.Time.now() - self.last_cmd_vel_time).to_sec()
-                    
-                    if time_since_last_cmd > self.command_timeout:
-                        rospy.logwarn_throttle(2, "🛡️ Watchdog: Command timeout! Sending stop command.")
-                        with self.command_lock:
-                            # 只有在真的超时时才发送，避免不必要的Mavlink消息
-                            self.vehicle.send_body_ned_velocity(0.0, 0.0)
-                
-                rate.sleep()
-                
-            except Exception as e:
-                rospy.logwarn("Error in command watchdog loop: %s", e)
-                time.sleep(0.1)
-    
     def cmd_vel_callback(self, msg):
         """
         Handle velocity command messages.
@@ -432,9 +393,6 @@ class ControlInterfaceNode:
         if not (self.connected and self.initialized):
             rospy.logwarn("Received cmd_vel but vehicle not ready")
             return
-        
-        # "Feed the dog" - a new command has been received
-        self.last_cmd_vel_time = rospy.Time.now()
         
         with self.command_lock:
             # Extract commands

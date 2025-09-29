@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 
+    boat_core.launch - 单艇核心节点定义
+    
+    可重用的单艇启动文件，用于多艇系统中的每一艇
+    包含：RTK节点、状态估计节点、控制接口节点
+    
+    参数化设计，支持不同的艇ID和硬件设备配置
+    -->
+    
+    <!-- 参数定义 -->
+    <arg name="boat_id" doc="Unique boat identifier (e.g., boat1, target)"/>
+    <arg name="rtk_device" doc="RTK GPS device path (e.g., /dev/ttyUSB0)"/>
+    <arg name="pixhawk_device" doc="Pixhawk connection string (e.g., /dev/ttyAMA0)"/>
+    <arg name="machine_name" default="localhost" />
+    <arg name="use_namespace" default="true" doc="Whether to use boat_id as namespace" />
+    
+    <!-- 条件命名空间组织 -->
+    <group if="$(arg use_namespace)" ns="$(arg boat_id)">
+        <!-- RTK GPS数据采集节点 -->
+        <node name="rtk_node" pkg="multi_boat_control" type="rtk_node.py" output="screen" machine="$(arg machine_name)">
+            <param name="port" value="$(arg rtk_device)" />
+            <param name="baudrate" value="115200" />
+            <param name="timeout" value="1.0" />
+        </node>
+        
+        <!-- 状态估计节点 (RTK + 航向角融合) -->
+        <node name="state_estimator_node" pkg="multi_boat_control" type="state_estimator_node.py" output="screen" machine="$(arg machine_name)">
+            <param name="publish_rate" value="10.0" />
+            <param name="max_data_age" value="2.0" />
+            <param name="require_both_sources" value="true" />
+            <param name="min_gps_accuracy" value="5.0" />
+            <param name="heading_timeout" value="3.0" />
+            
+            <!-- 话题映射保持本地命名空间 -->
+            <remap from="rtk_data" to="rtk_data" />
+            <remap from="boat/heading" to="boat/heading" />
+            <remap from="boat_state" to="boat_state" />
+        </node>
+        
+        <!-- 控制接口节点 (Pixhawk通信 + IMU + 航向角发布) -->
+        <node name="control_interface_node" pkg="multi_boat_control" type="control_interface_node.py" output="screen" required="true" machine="$(arg machine_name)">
+            <!-- Pixhawk连接参数 -->
+            <param name="connect_string" value="$(arg pixhawk_device)" />
+            <param name="baud_rate" value="921600" />
+            <param name="connection_timeout" value="60" />
+            <param name="max_init_retries" value="3" />
+            <param name="publish_rate" value="10.0" />
+            
+            <!-- 安全参数 -->
+            <param name="max_forward_speed" value="2.0" />
+            <param name="min_forward_speed" value="-0.5" />
+            <param name="max_yaw_rate" value="1.0" />
+            <param name="min_yaw_rate" value="-1.0" />
+            
+            <!-- 话题映射保持本地命名空间 -->
+            <remap from="~cmd_vel" to="control_interface_node/cmd_vel" />
+            <remap from="boat/imu/data" to="imu/data" />
+            <remap from="boat/heading" to="boat/heading" />
+        </node>
+    </group>
+    
+    <!-- 无命名空间模式（向后兼容） -->
+    <group unless="$(arg use_namespace)">
+        <!-- RTK GPS数据采集节点 -->
+        <node name="rtk_node" pkg="multi_boat_control" type="rtk_node.py" output="screen" machine="$(arg machine_name)">
+            <param name="port" value="$(arg rtk_device)" />
+            <param name="baudrate" value="115200" />
+            <param name="timeout" value="1.0" />
+        </node>
+        
+        <!-- 状态估计节点 (RTK + 航向角融合) -->
+        <node name="state_estimator_node" pkg="multi_boat_control" type="state_estimator_node.py" output="screen" machine="$(arg machine_name)">
+            <param name="publish_rate" value="10.0" />
+            <param name="max_data_age" value="2.0" />
+            <param name="require_both_sources" value="true" />
+            <param name="min_gps_accuracy" value="5.0" />
+            <param name="heading_timeout" value="3.0" />
+            
+            <!-- 话题映射保持本地命名空间 -->
+            <remap from="rtk_data" to="rtk_data" />
+            <remap from="boat/heading" to="boat/heading" />
+            <remap from="boat_state" to="boat_state" />
+        </node>
+        
+        <!-- 控制接口节点 (Pixhawk通信 + IMU + 航向角发布) -->
+        <node name="control_interface_node" pkg="multi_boat_control" type="control_interface_node.py" output="screen" required="true" machine="$(arg machine_name)">
+            <!-- Pixhawk连接参数 -->
+            <param name="connect_string" value="$(arg pixhawk_device)" />
+            <param name="baud_rate" value="921600" />
+            <param name="connection_timeout" value="60" />
+            <param name="max_init_retries" value="3" />
+            <param name="publish_rate" value="10.0" />
+            
+            <!-- 安全参数 -->
+            <param name="max_forward_speed" value="2.0" />
+            <param name="min_forward_speed" value="-0.5" />
+            <param name="max_yaw_rate" value="1.0" />
+            <param name="min_yaw_rate" value="-1.0" />
+            
+            <!-- 话题映射保持本地命名空间 -->
+            <remap from="~cmd_vel" to="control_interface_node/cmd_vel" />
+            <remap from="boat/imu/data" to="imu/data" />
+            <remap from="boat/heading" to="boat/heading" />
+        </node>
+    </group>
+    
+</launch>
+
+
+    
+    
+    

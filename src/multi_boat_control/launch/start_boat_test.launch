@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 
+    test_start_boat1.launch - Boat1独立测试启动文件
+    
+    职责：在boat1命名空间中启动该艇的所有核心节点
+    用途：支持分阶段测试 - 首先验证单船本地运行，然后验证多船网络通信
+    
+    硬编码配置：
+    - boat_id: boat1
+    - rtk_device: /dev/ttyUSB0 (本地RTK GPS设备)
+    - pixhawk_device: /dev/ttyUSB1 (本地Pixhawk设备)
+    -->
+    <machine name="localhost" address="192.168.202.147" />
+
+
+        <include file="$(find multi_boat_control)/launch/boat_core.launch">
+            <arg name="boat_id" value="boat1" />
+            <arg name="rtk_device" value="/dev/ttyUSB1" />
+            <arg name="pixhawk_device" value="/dev/ttyUSB0" />
+        </include>
+
+    
+</launch>

@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<launch>
+    <machine name="localhost" address="192.168.202.147" />
+    <machine name="boat2_machine" address="192.168.202.88" user="ubuntu" />
+    <machine name="target_machine" address="192.168.202.1" user="ubuntu" />
+    
+    <!-- 直接包含boat_core.launch，让它自己处理命名空间 -->
+    <include file="$(find multi_boat_control)/launch/boat_core.launch">
+        <arg name="boat_id" value="boat1" />
+        <arg name="rtk_device" value="/dev/ttyUSB0" />
+        <arg name="pixhawk_device" value="/dev/ttyUSB1" />
+        <arg name="use_namespace" value="true" />
+    </include>
+    
+    <!-- 直接包含boat_core.launch，让它自己处理命名空间 -->
+    <include file="$(find multi_boat_control)/launch/boat_core.launch">
+        <arg name="boat_id" value="boat2" />
+        <arg name="rtk_device" value="/dev/ttyUSB1" />
+        <arg name="pixhawk_device" value="/dev/ttyUSB0" />
+        <arg name="machine_name" value="boat2_machine" />
+        <arg name="use_namespace" value="true" />
+    </include>
+    
+    <group ns="target">
+        <include file="$(find multi_boat_control)/launch/boat_core.launch">
+            <arg name="boat_id" value="target" />
+            <arg name="rtk_device" value="/dev/ttyUSB0" />
+            <arg name="pixhawk_device" value="/dev/null" />
+            <arg name="machine_name" value="target_machine" />
+        </include>
+    </group>
+    
+</launch>
+
+
+
