@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 
+    test_network.launch - 网络通信验证启动文件
+    
+    启动网络监控节点用于验证多艇间的状态通信
+    在运行多艇系统时，单独启动此文件可监控通信质量
+    -->
+    
+    <node name="network_monitor" pkg="multi_boat_control" type="network_monitor.py" output="screen" />
+    
+</launch>

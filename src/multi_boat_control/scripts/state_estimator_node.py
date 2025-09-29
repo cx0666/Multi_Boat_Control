@@ -82,14 +82,14 @@ class StateEstimatorNode:
         
         # Subscribers
         self.rtk_sub = rospy.Subscriber(
-            '/rtk/raw', 
+            'rtk_data', 
             RTK, 
             self.rtk_callback,
             queue_size=1
         )
         
         self.heading_sub = rospy.Subscriber(
-            '/boat/heading', 
+            'boat/heading', 
             Float64, 
             self.heading_callback,
             queue_size=1
@@ -97,14 +97,14 @@ class StateEstimatorNode:
         
         # Publisher for complete boat state
         self.state_pub = rospy.Publisher(
-            '/boat_state', 
+            'boat_state', 
             BoatState, 
             queue_size=1
         )
         
         rospy.loginfo("✓ ROS interfaces configured")
-        rospy.loginfo("  Subscribing to: /rtk/raw, /boat/heading")
-        rospy.loginfo("  Publishing to: /boat_state")
+        rospy.loginfo("  Subscribing to: rtk_data, boat/heading")
+        rospy.loginfo("  Publishing to: boat_state")
     
     def rtk_callback(self, msg):
         """
